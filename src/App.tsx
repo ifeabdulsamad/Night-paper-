@@ -78,20 +78,73 @@ export default function App() {
     if (!file) return;
     setIsProcessing(true);
     try {
-      const existingPdfBytes = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      const pdfBytes = await pdfDoc.save();
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      const outPdfDoc = await PDFDocument.create();
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+
+        // 1. Raw Render Canvas (Captures original PDF content on white)
+        const rawCanvas = document.createElement('canvas');
+        const rawCtx = rawCanvas.getContext('2d');
+        if (!rawCtx) continue;
+
+        rawCanvas.width = viewport.width;
+        rawCanvas.height = viewport.height;
+
+        // Ensure white background so inversion works correctly for both background and text
+        rawCtx.fillStyle = 'white';
+        rawCtx.fillRect(0, 0, rawCanvas.width, rawCanvas.height);
+
+        await (page as any).render({
+          canvasContext: rawCtx,
+          viewport: viewport
+        }).promise;
+
+        // 2. Filter Canvas (Applies visual transforms to the raw render)
+        const filterCanvas = document.createElement('canvas');
+        const filterCtx = filterCanvas.getContext('2d');
+        if (!filterCtx) continue;
+
+        filterCanvas.width = viewport.width;
+        filterCanvas.height = viewport.height;
+
+        const filterString = isSmartDark 
+          ? `invert(1) hue-rotate(180deg) contrast(${contrast}%) brightness(${brightness}%)`
+          : `contrast(${contrast}%) brightness(${brightness}%)`;
+        
+        filterCtx.filter = filterString;
+        filterCtx.drawImage(rawCanvas, 0, 0);
+
+        // 3. Embed into PDF
+        const imageUri = filterCanvas.toDataURL('image/jpeg', 0.85);
+        const imageBytes = await fetch(imageUri).then(res => res.arrayBuffer());
+        const embeddedImage = await outPdfDoc.embedJpg(imageBytes);
+
+        const newPage = outPdfDoc.addPage([viewport.width, viewport.height]);
+        newPage.drawImage(embeddedImage, {
+          x: 0,
+          y: 0,
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+
+      const pdfBytes = await outPdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `night_${file.name}`;
+      link.download = `night_${file.name.replace('.pdf', '')}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to export PDF:', err);
+      alert('Failed to generate dark mode PDF. Please try a smaller file.');
     } finally {
       setIsProcessing(false);
     }
