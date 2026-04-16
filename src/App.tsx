@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { 
   Upload, Download, Moon, Files, Layout, Settings, 
   Search, User, Trash2, FileText, ChevronRight, 
@@ -10,7 +11,7 @@ import { db, type Artifact } from './lib/db';
 import { PDFDocument } from 'pdf-lib';
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 /**
  * NightPaper: A smart PDF dark mode reader for deep focus.
