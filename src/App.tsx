@@ -111,7 +111,7 @@ export default function App() {
     <div className="flex h-screen overflow-hidden text-gray-400 font-sans">
       
       {/* --- LEFT SIDEBAR --- */}
-      <aside className="w-64 border-r border-white/5 bg-background-panel p-6 flex flex-col justify-between">
+      <aside className="w-64 border-r border-white/5 bg-night-900 p-6 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-2 mb-10 text-white">
             <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -146,9 +146,9 @@ export default function App() {
       </aside>
 
       {/* --- MAIN CANVAS --- */}
-      <main className="flex-1 flex flex-col bg-background-night relative overflow-hidden">
+      <main className="flex-1 flex flex-col bg-night-950 relative overflow-hidden">
         {/* Header bar */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-background-night/80 backdrop-blur-md z-10">
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-night-950/80 backdrop-blur-md z-10">
           <div className="flex gap-8 text-sm font-medium">
             <button className={`${!file ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 hover:text-white'} transition py-5 px-1 underline-offset-[20px]`} onClick={() => setFile(null)}>
               Enhance
@@ -308,7 +308,7 @@ export default function App() {
       </main>
 
       {/* --- RIGHT ADJUSTMENT PANEL --- */}
-      <aside className="w-80 border-l border-white/5 p-8 flex flex-col bg-background-panel">
+      <aside className="w-80 border-l border-white/5 p-8 flex flex-col bg-night-900">
         <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-600 mb-8">Document Context</h3>
         
         <div className="space-y-6 mb-12">
