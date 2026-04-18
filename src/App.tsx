@@ -4,7 +4,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { 
   Upload, Download, Moon, Files, Layout, Settings, 
   Search, User, Trash2, FileText, ChevronRight, 
-  HelpCircle, ExternalLink, Sliders
+  HelpCircle, ExternalLink, Sliders, Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, type Artifact } from './lib/db';
@@ -25,6 +25,60 @@ export default function App() {
   const [recentFiles, setRecentFiles] = useState<Artifact[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Initialize Sync Session
+  useEffect(() => {
+    let sid = localStorage.getItem('nightpaper_session_id');
+    if (!sid) {
+      sid = Math.random().toString(36).substring(7);
+      localStorage.setItem('nightpaper_session_id', sid);
+    }
+    setSessionId(sid);
+    
+    // Attempt to load synced state
+    const loadSync = async () => {
+      try {
+        const resp = await fetch(`/api/sync/load/${sid}`);
+        if (!resp.ok) return; // Silent fail for load to not disrupt UX
+        const data = await resp.json();
+        if (data && typeof data === 'object') {
+          if (data.contrast !== undefined) setContrast(data.contrast);
+          if (data.brightness !== undefined) setBrightness(data.brightness);
+          if (data.isSmartDark !== undefined) setIsSmartDark(data.isSmartDark);
+        }
+      } catch (e) { console.error("Sync load failed", e); }
+    };
+    loadSync();
+  }, []);
+
+  // Sync state to server on changes
+  useEffect(() => {
+    if (!sessionId) return;
+    const saveSync = async () => {
+      try {
+        await fetch('/api/sync/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            data: { contrast, brightness, isSmartDark }
+          })
+        });
+      } catch (e) { /* silent fail */ }
+    };
+    const timer = setTimeout(saveSync, 2000);
+    return () => clearTimeout(timer);
+  }, [contrast, brightness, isSmartDark, sessionId]);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load history from IndexedDB
   const refreshHistory = useCallback(async () => {
@@ -35,6 +89,31 @@ export default function App() {
   useEffect(() => {
     refreshHistory();
   }, [refreshHistory]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'AUTH_SUCCESS') {
+        alert(`${event.data.provider} connected successfully! (Demo: file fetching logic would trigger here)`);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const initiateOAuth = async (provider: 'google' | 'dropbox') => {
+    try {
+      const resp = await fetch(`/api/auth/${provider}/url`);
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({ error: 'Unknown server error' }));
+        throw new Error(errorData.error || `Server returned ${resp.status}`);
+      }
+      const { url } = await resp.json();
+      window.open(url, 'auth_popup', 'width=600,height=700');
+    } catch (e: any) {
+      console.error("OAuth initiation failed", e);
+      alert(`Connection failed: ${e.message}`);
+    }
+  };
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
@@ -112,10 +191,12 @@ export default function App() {
         filterCanvas.height = viewport.height;
 
         const filterString = isSmartDark 
-          ? `invert(1) hue-rotate(180deg) contrast(${contrast}%) brightness(${brightness}%)`
+          ? `invert(1) hue-rotate(180deg) contrast(${contrast}%) brightness(${brightness}%) saturate(1.2) contrast(1.1)`
           : `contrast(${contrast}%) brightness(${brightness}%)`;
         
         filterCtx.filter = filterString;
+        filterCtx.imageSmoothingEnabled = true;
+        filterCtx.imageSmoothingQuality = 'high';
         filterCtx.drawImage(rawCanvas, 0, 0);
 
         // 3. Embed into PDF
@@ -162,16 +243,34 @@ export default function App() {
     };
 
   return (
-    <div className="flex h-screen overflow-hidden text-gray-400 font-sans">
+    <div className="flex h-screen overflow-hidden text-gray-400 font-sans relative">
       
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {(isSidebarOpen || isRightPanelOpen) && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => { setIsSidebarOpen(false); setIsRightPanelOpen(false); }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* --- LEFT SIDEBAR --- */}
-      <aside className="w-64 border-r border-white/5 bg-night-900 p-6 flex flex-col justify-between">
+      <aside className={`fixed inset-y-0 left-0 w-64 border-r border-white/5 bg-night-900 p-6 flex flex-col justify-between transition-transform duration-300 z-50 lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div>
-          <div className="flex items-center gap-2 mb-10 text-white">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Moon size={20} fill="white" />
+          <div className="flex items-center justify-between mb-10 text-white">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <Moon size={20} fill="white" />
+              </div>
+              <span className="font-bold text-lg tracking-tight">NightPaper</span>
             </div>
-            <span className="font-bold text-lg tracking-tight">NightPaper</span>
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-white">
+              <X size={20} />
+            </button>
           </div>
           
           <nav className="space-y-1">
@@ -182,9 +281,24 @@ export default function App() {
           </nav>
 
           <nav className="mt-10 space-y-1">
-            <h3 className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-3">Community</h3>
-            <SidebarItem icon={<HelpCircle size={18}/>} label="Support" />
-            <SidebarItem icon={<ExternalLink size={18}/>} label="Extension" />
+            <h3 className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-3">Sync & Cloud</h3>
+            <CloudConnectItem 
+              provider="google" 
+              label="Google Drive" 
+              onConnect={() => initiateOAuth('google')} 
+            />
+            <CloudConnectItem 
+              provider="dropbox" 
+              label="Dropbox" 
+              onConnect={() => initiateOAuth('dropbox')} 
+            />
+            <div className="px-3 pt-6">
+              <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl">
+                 <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">Session ID</p>
+                 <p className="text-xs font-mono text-gray-500 truncate">{sessionId}</p>
+                 <p className="text-[10px] text-gray-600 mt-2 leading-tight">Use this ID on another device to sync your reading settings.</p>
+              </div>
+            </div>
           </nav>
         </div>
 
@@ -200,33 +314,46 @@ export default function App() {
       </aside>
 
       {/* --- MAIN CANVAS --- */}
-      <main className="flex-1 flex flex-col bg-night-950 relative overflow-hidden">
+      <main className="flex-1 flex flex-col bg-night-950 relative overflow-hidden w-full">
         {/* Header bar */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-night-950/80 backdrop-blur-md z-10">
-          <div className="flex gap-8 text-sm font-medium">
-            <button className={`${!file ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 hover:text-white'} transition py-5 px-1 underline-offset-[20px]`} onClick={() => setFile(null)}>
-              Enhance
-            </button>
-            <button className="text-gray-500 hover:text-white transition py-5">History</button>
-            <button className="text-gray-500 hover:text-white transition py-5">Settings</button>
-          </div>
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 lg:px-8 bg-night-950/80 backdrop-blur-md z-30">
           <div className="flex items-center gap-4">
-            <div className="bg-white/5 rounded-full px-4 py-1.5 flex items-center gap-2 border border-white/5 text-sm ring-1 ring-white/5">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 bg-white/5 rounded-xl text-gray-400 hover:text-white transition"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden sm:flex gap-8 text-sm font-medium">
+              <button className={`${!file ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 hover:text-white'} transition py-5 px-1 underline-offset-[20px]`} onClick={() => setFile(null)}>
+                Enhance
+              </button>
+              <button className="text-gray-500 hover:text-white transition py-5 hidden md:block">History</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <div className="bg-white/5 rounded-full px-4 py-1.5 flex items-center gap-2 border border-white/5 text-sm ring-1 ring-white/5 hidden xs:flex">
               <Search size={14} className="text-gray-500" />
               <input 
-                className="bg-transparent border-none outline-none text-white w-48 placeholder:text-gray-600" 
-                placeholder="Search documents..." 
+                className="bg-transparent border-none outline-none text-white w-24 md:w-48 placeholder:text-gray-600" 
+                placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button className="p-2 hover:bg-white/5 rounded-full transition text-gray-500">
+            <button 
+              onClick={() => setIsRightPanelOpen(true)}
+              className="lg:hidden p-2 bg-white/5 rounded-xl text-gray-400 hover:text-white transition"
+            >
+              <Sliders size={20} />
+            </button>
+            <button className="p-2 hover:bg-white/5 rounded-full transition text-gray-500 hidden sm:block">
               <User size={20} />
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar scroll-smooth">
           <AnimatePresence mode="wait">
             {!file ? (
               <motion.section 
@@ -330,10 +457,14 @@ export default function App() {
                    </button>
                 </div>
 
-                <div className="relative group">
+                <div className="relative group w-full flex justify-center no-select">
                   <div 
                     className="bg-white shadow-2xl rounded-sm overflow-hidden ring-1 ring-white/10" 
-                    style={filterStyle}
+                    style={{ 
+                      ...filterStyle, 
+                      colorScheme: 'light',
+                      forcedColorAdjust: 'none'
+                    } as any}
                   >
                     <Document 
                       file={file} 
@@ -342,9 +473,10 @@ export default function App() {
                     >
                       <Page 
                         pageNumber={1} 
-                        width={Math.min(window.innerWidth - 600, 800)} 
+                        width={Math.min(windowWidth - (windowWidth < 1024 ? 32 : 600), 800)} 
                         renderTextLayer={false} 
-                        renderAnnotationLayer={false} 
+                        renderAnnotationLayer={false}
+                        className="pointer-events-none" 
                       />
                     </Document>
                   </div>
@@ -362,8 +494,13 @@ export default function App() {
       </main>
 
       {/* --- RIGHT ADJUSTMENT PANEL --- */}
-      <aside className="w-80 border-l border-white/5 p-8 flex flex-col bg-night-900">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-600 mb-8">Document Context</h3>
+      <aside className={`fixed inset-y-0 right-0 w-80 border-l border-white/5 p-8 flex flex-col bg-night-900 transition-transform duration-300 z-50 lg:relative lg:translate-x-0 ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex items-center justify-between mb-8 lg:block">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Document Context</h3>
+          <button onClick={() => setIsRightPanelOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
         
         <div className="space-y-6 mb-12">
           <ContextItem label="Title" value={file ? file.name : "NightPaper_Guide.pdf"} />
@@ -435,6 +572,21 @@ export default function App() {
 }
 
 // Helper Components
+function CloudConnectItem({ provider, label, onConnect }: { provider: string, label: string, onConnect: () => void }) {
+  return (
+    <div 
+      onClick={onConnect}
+      className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer hover:bg-white/5 group transition-all"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-2 h-2 rounded-full ${provider === 'google' ? 'bg-yellow-400' : 'bg-blue-400'}`} />
+        <span className="text-sm font-semibold text-gray-500 group-hover:text-white">{label}</span>
+      </div>
+      <ExternalLink size={12} className="text-gray-700 group-hover:text-indigo-400" />
+    </div>
+  );
+}
+
 function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
   return (
     <div className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${active ? 'bg-indigo-600/10 text-indigo-400' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
