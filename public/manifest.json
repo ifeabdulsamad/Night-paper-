@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Obsidian AI - Study System",
+  "version": "1.0.0",
+  "description": "Transform PDFs into AI-powered study materials, flashcards, and quizzes.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Obsidian AI"
+  },
+  "permissions": ["storage", "activeTab"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
