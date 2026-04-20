@@ -3,12 +3,13 @@
 @theme {
   --color-night-950: #050505;
   --color-night-900: #0a0a0a;
-  --color-night-primary: #6366f1;
+  --color-night-primary: #7CB078;
+  --color-night-primary-dim: rgba(124, 176, 120, 0.1);
 }
 
 @layer base {
   body {
-    @apply bg-night-950 text-gray-400 antialiased selection:bg-indigo-500/30 font-sans overflow-x-hidden;
+    @apply bg-night-950 text-gray-400 antialiased selection:bg-night-primary/30 font-sans overflow-x-hidden;
     -webkit-tap-highlight-color: transparent;
   }
 }

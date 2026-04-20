@@ -100,7 +100,7 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const initiateOAuth = async (provider: 'google' | 'dropbox') => {
+  const initiateOAuth = async (provider: 'google') => {
     try {
       const resp = await fetch(`/api/auth/${provider}/url`);
       if (!resp.ok) {
@@ -263,7 +263,7 @@ export default function App() {
         <div>
           <div className="flex items-center justify-between mb-10 text-white">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <div className="w-9 h-9 bg-night-primary rounded-xl flex items-center justify-center shadow-lg shadow-night-primary/20">
                 <Moon size={20} fill="white" />
               </div>
               <span className="font-bold text-lg tracking-tight">NightPaper</span>
@@ -287,14 +287,9 @@ export default function App() {
               label="Google Drive" 
               onConnect={() => initiateOAuth('google')} 
             />
-            <CloudConnectItem 
-              provider="dropbox" 
-              label="Dropbox" 
-              onConnect={() => initiateOAuth('dropbox')} 
-            />
             <div className="px-3 pt-6">
-              <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl">
-                 <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">Session ID</p>
+              <div className="p-3 bg-night-primary-dim border border-night-primary/10 rounded-xl">
+                 <p className="text-[9px] font-bold text-night-primary uppercase mb-1">Session ID</p>
                  <p className="text-xs font-mono text-gray-500 truncate">{sessionId}</p>
                  <p className="text-[10px] text-gray-600 mt-2 leading-tight">Use this ID on another device to sync your reading settings.</p>
               </div>
@@ -308,7 +303,7 @@ export default function App() {
             <span>{(recentFiles.reduce((acc, f) => acc + parseFloat(f.size), 0)).toFixed(1)}MB</span>
           </div>
           <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-            <div className="bg-indigo-500 h-full w-[35%]"></div>
+            <div className="bg-night-primary h-full w-[35%]"></div>
           </div>
         </div>
       </aside>
@@ -325,7 +320,7 @@ export default function App() {
               <Menu size={20} />
             </button>
             <div className="hidden sm:flex gap-8 text-sm font-medium">
-              <button className={`${!file ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 hover:text-white'} transition py-5 px-1 underline-offset-[20px]`} onClick={() => setFile(null)}>
+              <button className={`${!file ? 'text-white border-b-2 border-night-primary' : 'text-gray-500 hover:text-white'} transition py-5 px-1 underline-offset-[20px]`} onClick={() => setFile(null)}>
                 Enhance
               </button>
               <button className="text-gray-500 hover:text-white transition py-5 hidden md:block">History</button>
@@ -372,7 +367,7 @@ export default function App() {
                 <label 
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="group relative block w-full aspect-[21/9] border-2 border-dashed border-white/10 rounded-[40px] hover:border-indigo-500/50 transition-all cursor-pointer bg-white/[0.01] hover:bg-white/[0.02]"
+                  className="group relative block w-full aspect-[21/9] border-2 border-dashed border-white/10 rounded-[40px] hover:border-night-primary/50 transition-all cursor-pointer bg-white/[0.01] hover:bg-white/[0.02]"
                 >
                   <input type="file" className="hidden" onChange={onFileChange} accept="application/pdf" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -380,11 +375,11 @@ export default function App() {
                       whileHover={{ scale: 1.1 }}
                       className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6 border border-white/5"
                     >
-                      <Upload className="text-indigo-500" size={32} />
+                      <Upload className="text-night-primary" size={32} />
                     </motion.div>
                     <h3 className="text-white font-semibold text-2xl tracking-tight">Drop PDF to begin</h3>
                     <p className="text-gray-500 text-sm mt-2 font-medium">Maximum file size: 128MB per document</p>
-                    <div className="mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/20 active:scale-95">
+                    <div className="mt-8 px-8 py-3 bg-night-primary hover:opacity-90 text-white rounded-2xl font-bold transition-all shadow-xl shadow-night-primary/20 active:scale-95">
                       Select Document
                     </div>
                   </div>
@@ -395,7 +390,7 @@ export default function App() {
                   <div className="flex justify-between items-center mb-8">
                     <div className="flex items-center gap-2">
                        <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Recent Artifacts</h2>
-                       <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                       <div className="w-1.5 h-1.5 rounded-full bg-night-primary animate-pulse" />
                     </div>
                     <button 
                       onClick={clearHistory}
@@ -413,7 +408,7 @@ export default function App() {
                         key={f.id} 
                         className="group bg-white/5 p-5 rounded-3xl border border-white/5 hover:bg-white/[0.08] transition-all cursor-pointer"
                       >
-                        <div className="aspect-[4/3] bg-[#080808] rounded-2xl mb-5 flex items-center justify-center text-gray-800 border border-white/5 group-hover:border-indigo-500/20 transition-colors">
+                        <div className="aspect-[4/3] bg-[#080808] rounded-2xl mb-5 flex items-center justify-center text-gray-800 border border-white/5 group-hover:border-night-primary/20 transition-colors">
                            <FileText size={48} className="opacity-10 group-hover:opacity-20 transition-opacity" />
                         </div>
                         <div className="flex justify-between items-start">
@@ -422,7 +417,7 @@ export default function App() {
                             <p className="text-[11px] text-gray-500 font-medium">{f.date} • {f.size}</p>
                           </div>
                           <div className="p-2 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronRight size={14} className="text-indigo-400" />
+                            <ChevronRight size={14} className="text-night-primary" />
                           </div>
                         </div>
                       </motion.div>
@@ -511,7 +506,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2 mb-6">
-           <Sliders size={12} className="text-indigo-500" />
+           <Sliders size={12} className="text-night-primary" />
            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Visual Engine</h3>
         </div>
         
@@ -523,7 +518,7 @@ export default function App() {
             </div>
             <button 
               onClick={() => setIsSmartDark(!isSmartDark)}
-              className={`w-11 h-6 rounded-full transition-all duration-300 relative ${isSmartDark ? 'bg-indigo-600' : 'bg-white/10'}`}
+              className={`w-11 h-6 rounded-full transition-all duration-300 relative ${isSmartDark ? 'bg-night-primary' : 'bg-white/10'}`}
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 transform ${isSmartDark ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
@@ -552,7 +547,7 @@ export default function App() {
         <button 
           onClick={exportPDF}
           disabled={!file || isProcessing}
-          className="mt-auto w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-bold py-5 rounded-2xl shadow-2xl shadow-indigo-600/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+          className="mt-auto w-full bg-night-primary hover:opacity-90 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-bold py-5 rounded-2xl shadow-2xl shadow-night-primary/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
         >
           {isProcessing ? (
             <span className="animate-pulse">Processing...</span>
@@ -582,19 +577,19 @@ function CloudConnectItem({ provider, label, onConnect }: { provider: string, la
         <div className={`w-2 h-2 rounded-full ${provider === 'google' ? 'bg-yellow-400' : 'bg-blue-400'}`} />
         <span className="text-sm font-semibold text-gray-500 group-hover:text-white">{label}</span>
       </div>
-      <ExternalLink size={12} className="text-gray-700 group-hover:text-indigo-400" />
+      <ExternalLink size={12} className="text-gray-700 group-hover:text-night-primary" />
     </div>
   );
 }
 
 function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
   return (
-    <div className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${active ? 'bg-indigo-600/10 text-indigo-400' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${active ? 'text-indigo-400' : 'group-hover:text-white transition-colors'}`}>
+    <div className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${active ? 'bg-night-primary/10 text-night-primary' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+      <span className={`${active ? 'text-night-primary' : 'group-hover:text-white transition-colors'}`}>
         {icon}
       </span> 
       <span className="text-sm font-semibold tracking-tight">{label}</span>
-      {active && <div className="ml-auto w-1 h-1 rounded-full bg-indigo-400" />}
+      {active && <div className="ml-auto w-1 h-1 rounded-full bg-night-primary" />}
     </div>
   );
 }
@@ -613,11 +608,11 @@ function SliderControl({ label, value, onChange, min, max, leftLabel, rightLabel
     <div className="space-y-4">
       <div className="flex justify-between items-center text-white">
         <label className="text-[11px] font-bold text-gray-500 uppercase tracking-tight">{label}</label>
-        <span className="text-[10px] text-indigo-400 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded-md">{value}%</span>
+        <span className="text-[10px] text-night-primary font-mono bg-night-primary/10 px-1.5 py-0.5 rounded-md">{value}%</span>
       </div>
       <input 
         type="range" 
-        className="w-full h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all border-none outline-none ring-0"
+        className="w-full h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-night-primary transition-all border-none outline-none ring-0"
         min={min} max={max} value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
       />
@@ -632,7 +627,7 @@ function SliderControl({ label, value, onChange, min, max, leftLabel, rightLabel
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center p-20 text-gray-500">
-      <div className="w-10 h-10 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
+      <div className="w-10 h-10 border-2 border-night-primary/20 border-t-night-primary rounded-full animate-spin mb-4" />
       <p className="text-sm font-medium animate-pulse">Rendering Artifact...</p>
     </div>
   );

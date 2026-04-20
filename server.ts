@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { google } from "googleapis";
-import { Dropbox } from "dropbox";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 
@@ -75,67 +74,6 @@ app.get("/auth/google/callback", async (req, res) => {
   } catch (error: any) {
     console.error("Google Callback Error:", error);
     res.status(500).send(`Auth Failed: ${error.message}`);
-  }
-});
-
-// --- DROPBOX OAUTH ---
-const getDropboxClient = () => {
-  if (!process.env.DROPBOX_CLIENT_ID || !process.env.DROPBOX_CLIENT_SECRET) {
-     throw new Error("Dropbox API credentials missing. Please set them in Settings.");
-  }
-  return new Dropbox({ 
-    clientId: process.env.DROPBOX_CLIENT_ID, 
-    clientSecret: process.env.DROPBOX_CLIENT_SECRET 
-  });
-}
-
-app.get("/api/auth/dropbox/url", async (req, res) => {
-  try {
-    const dbx = getDropboxClient();
-    const authUrl = await dbx.auth.getAuthenticationUrl(
-      `${process.env.APP_URL || 'http://localhost:3000'}/auth/dropbox/callback`,
-      undefined,
-      'code',
-      'offline',
-      undefined,
-      'none',
-      false
-    );
-    res.json({ url: authUrl });
-  } catch (error: any) {
-    console.error("Dropbox Auth URL error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get("/auth/dropbox/callback", async (req, res) => {
-  const { code } = req.query;
-  try {
-    const dbx = getDropboxClient();
-    const response = await dbx.auth.getAccessTokenFromCode(
-      `${process.env.APP_URL || 'http://localhost:3000'}/auth/dropbox/callback`,
-      code as string
-    );
-    res.cookie("dropbox_token", JSON.stringify(response.result), { httpOnly: true, secure: true, sameSite: 'none' });
-    res.send(`
-      <html>
-        <body style="background: #000; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
-          <div style="text-align: center;">
-            <p>Authentication Successful!</p>
-            <p>Connecting you back to NightPaper...</p>
-          </div>
-          <script>
-            if (window.opener) {
-              window.opener.postMessage({ type: 'AUTH_SUCCESS', provider: 'dropbox' }, '*');
-              setTimeout(() => window.close(), 1000);
-            }
-          </script>
-        </body>
-      </html>
-    `);
-  } catch (error: any) {
-    console.error("Dropbox Callback Error:", error);
-    res.status(500).send(`Dropbox Auth Failed: ${error.message}`);
   }
 });
 
