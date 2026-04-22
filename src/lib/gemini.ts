@@ -62,5 +62,20 @@ export async function generateStudyMaterial(text: string): Promise<StudyMaterial
     }
   });
 
-  return JSON.parse(response.text || "{}") as StudyMaterial;
+  const textResponse = response.text || "{}";
+  try {
+    // Clean potential markdown blocks if present, though responseMimeType should handle it
+    const cleaned = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    
+    // Ensure all required fields exist to prevent UI crashes
+    if (!parsed.summary || !parsed.keyPoints || !parsed.flashcards || !parsed.questions) {
+      throw new Error("Missing required fields in AI response");
+    }
+    
+    return parsed as StudyMaterial;
+  } catch (e) {
+    console.error("Failed to parse Gemini response:", textResponse, e);
+    throw new Error("AI generated invalid study materials. Please try again.");
+  }
 }

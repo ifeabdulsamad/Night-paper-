@@ -17,6 +17,26 @@ import { generateStudyMaterial, type StudyMaterial } from './lib/gemini';
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const extractTextFromPDF = async (file: File): Promise<string> => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+    // Only extract from the first 5 pages to keep it snappy and within token limits
+    const pagesToExtract = Math.min(pdf.numPages, 5);
+    for (let i = 1; i <= pagesToExtract; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => (item as any).str).join(" ");
+      fullText += pageText + "\n";
+    }
+    return fullText;
+  } catch (e) {
+    console.error("Text extraction failed", e);
+    return "";
+  }
+};
+
 /**
  * NightPaper: A smart PDF dark mode reader for deep focus.
  */
@@ -35,7 +55,7 @@ export default function App() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // New Obsidian AI States
+  // Nightpaper AI States
   const [activeMode, setActiveMode] = useState<'read' | 'study' | 'practice'>('read');
   const [activeTab, setActiveTab] = useState<'summary' | 'keyPoints' | 'flashcards' | 'questions'>('summary');
   const [studyMaterial, setStudyMaterial] = useState<StudyMaterial | null>(null);
@@ -162,6 +182,12 @@ export default function App() {
       setFile(uploadedFile);
       setStudyMaterial(null);
       setActiveMode('read');
+      setCurrentFlashcard(0);
+      setIsCardFlipped(false);
+      setCurrentQuestion(0);
+      setSelectedOption(null);
+      setShowSolution(false);
+      setScore(0);
       await db.artifacts.add({
         filename: uploadedFile.name,
         date: new Date().toLocaleDateString(),
@@ -176,14 +202,24 @@ export default function App() {
     if (!file || studyMaterial) return;
     setIsAIPreparing(true);
     try {
-      // In a real app we'd extract text from PDF, for now we simulate with the filename and context
-      // You'd typically use a library like pdfjs-dist or a backend service for text extraction
-      const materials = await generateStudyMaterial(`Subject: ${file.name}. 
-        The student is reading a technical/educational document about this topic. 
-        Please provide insightful study materials based on the likely content of such a file.`);
+      const extractedText = await extractTextFromPDF(file);
+      const contextText = extractedText.length > 100 
+        ? extractedText 
+        : `Subject: ${file.name}. (Limited text extracted)`;
+        
+      const materials = await generateStudyMaterial(contextText);
       setStudyMaterial(materials);
-    } catch (e) {
+      setActiveTab('summary');
+      setCurrentFlashcard(0);
+      setIsCardFlipped(false);
+      setCurrentQuestion(0);
+      setSelectedOption(null);
+      setShowSolution(false);
+      setScore(0);
+    } catch (e: any) {
       console.error("AI Generation failed", e);
+      alert(e.message || "Something went wrong while generating study materials.");
+      setActiveMode('read');
     } finally {
       setIsAIPreparing(false);
     }
